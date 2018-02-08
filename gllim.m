@@ -113,15 +113,15 @@ else
         % theta), deduce r, muw and Sw from E-steps on complete theta.
         theta = Maximization(t,y,r,[],[],cstr,verb);
         K=length(theta.pi);
-        if(isempty(cstr.cw));
+        if(isempty(cstr.cw))
             cstr.cw=zeros(Lw,K); % Default value for cw
-        end;
+        end
         theta.c=cat(1,theta.c,cstr.cw(:,1:K)); %LxK
         Gammaf=zeros(L,L,K);
         Gammaf(1:Lt,1:Lt,:)=theta.Gamma; %LtxLtxK
-        if(isempty(cstr.Gammaw));
+        if(isempty(cstr.Gammaw))
             cstr.Gammaw=repmat(eye(Lw),[1,1,K]); % Default value for Gammaw
-        end;
+        end
         Gammaf(Lt+1:L,Lt+1:L,:)=cstr.Gammaw(:,:,1:K); %LwxLwxK
         theta.Gamma=Gammaf;
         % Initialize Awk with local weighted PCAs on residuals:
@@ -239,8 +239,13 @@ function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
             logr(:,k) = logr(:,k) + loggausspdf_diag(y,muyk,covyk)';
         end
         if(Lt>0)
-            logr(:,k) = logr(:,k)+...
-                        loggausspdf(t,th.c(1:Lt,k),th.Gamma(1:Lt,1:Lt,k))';
+            if isdiag(th.Gamma(1:Lt,1:Lt,k))
+                logr(:,k) = logr(:,k)+...
+                                loggausspdf_diag(t,th.c(1:Lt,k),th.Gamma(1:Lt,1:Lt,k))';
+            else
+                logr(:,k) = logr(:,k)+...
+                                loggausspdf(t,th.c(1:Lt,k),th.Gamma(1:Lt,1:Lt,k))';
+            end
         end
     end
     lognormr=logsumexp(logr,2);

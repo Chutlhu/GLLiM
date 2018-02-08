@@ -27,7 +27,7 @@ function gllim_face_test(images,poses)
     %%%% Training a GLLiM model using Lw=0 or Lw=1 %%%
     Lw=0;    
     [thetaLw0,~]=gllim(t,y, K,'Lw',Lw,'cstr',cstr,'maxiter',20,'verb',2);             
-    Lw=1;    
+    Lw=2;    
     [thetaLw1,~]=gllim(t,y,K,'Lw',Lw,'cstr',cstr,'maxiter',20,'verb',2);          
     
     % Pose Estimation:    

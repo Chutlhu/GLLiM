@@ -24,7 +24,7 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
 %   - cstr.pi             % fixed value (1xK) or ''=uncons. or '*'=equal
 %   - cstr.A             % fixed value (DxL) or ''=uncons.
 %   - cstr.b             % fixed value (DxK) or ''=uncons.
-%   - cstr.Sigma         % fixed value (DxDxK) or ''=uncons.
+%   - cstr.Sigma         % fixed value (DxK) or ''=diagonal.
 %                         | or {'','d','i'}{'','*'} (1)
 %- verb {0,1,2}           % Verbosity (default 1)
 %%%% Output %%%%
@@ -34,7 +34,7 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
 %   - theta.pi (1xK)      % Gaussian weights of X
 %   - theta.A (DxLxK)     % Affine transformation matrices
 %   - theta.b (DxK)       % Affine transformation vectors
-%   - theta.Sigma (DxDxK) % Error covariances
+%   - theta.Sigma (DxDxK) % Error covariances (as a sparse matrix)
 %- r (NxK)                % Posterior probabilities p(z_n=k|x_n,y_n;theta)
 %%% (1) 'd'=diag., 'i'=iso., '*'=equal for all k, 'v'=equal det. for all k
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -93,6 +93,12 @@ else
               [~,C] = kmeans([t;y]',in_K);
           end
       end
+      % [~, ~, ~, r] = emgm([t;y], C', 3, verb);
+      % [~, ~, ~, r] = emgm([t;y], in_K, 3, verb);
+      [~, ~, ~, r] = emgm([t;y], C', 20, verb);
+      % [~,cluster_idx]=mar,[],2);
+      % fig=figure;clf(fig);
+      % scatter(t(1,,t(2,,200,cluster_idx','filled');
       if verb>=1
           fprintf('done.\n')
           fprintf('Running GMM... ')
@@ -133,7 +139,7 @@ else
             [U,Lambda]=eigs(C,Lw); % Weighted residual PCA U:DxLw
             % The residual variance is the discarded eigenvalues' mean
             sigma2k=(trace(C)-trace(Lambda))./(D-Lw);
-            theta.Sigma(:,:,k)=sigma2k*eye(D);
+            theta.Sigma(:,k)=sigma2k*ones(D,1);
             Aw(:,:,k)=U*sqrt(Lambda-sigma2k*eye(Lw));
         end
         theta.A=cat(2,theta.A,Aw); %DxLxK
@@ -180,6 +186,12 @@ while (~converged && iter<maxiter)
 end
 %%% Final log-likelihood %%%%
 LLf=LL(iter);
+K = size(theta.Sigma,2);
+Sigma_full = zeros(D,D,K);
+for k=1:K
+    Sigma_full(:,:,k) = diag(theta.Sigma(:,k));
+end
+theta.Sigma = Sigma_full;
 
 
 % =============================Final plots===============================
@@ -198,8 +210,8 @@ end
 end
 
 function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
-    if(verb>=1);fprintf(1,'  EZ'); end;
-    if(verb>=3);fprintf(1,' k='); end;
+    if(verb>=1);fprintf(1,'  EZ'); end
+    if(verb>=3);fprintf(1,' k='); end
     [D,N]=size(y);
     K=length(th.pi);
     Lt=size(t,1);
@@ -207,22 +219,25 @@ function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
     Lw=L-Lt;
     logr=NaN(N,K);
     for k=1:K
-        if(verb>=3);fprintf(1,'%d,',k); end;
+        if(verb>=3);fprintf(1,'%d,',k); end
         muyk=th.b(:,k); % Dx1
-        covyk=reshape(th.Sigma(:,:,k),D,D); % DxD
-        if(Lt>0);
+        covyk=th.Sigma(:,k); % Dx1
+        if(Lt>0)
             Atk=reshape(th.A(:,1:Lt,k),D,Lt); % DxLt
             muyk=bsxfun(@plus,muyk,Atk*t); % DxN
         end
-        if(Lw>0);
+        if(Lw>0)
             Awk=reshape(th.A(:,Lt+1:L,k),D,Lw); % DxLw
             Gammawk=reshape(th.Gamma(Lt+1:L,Lt+1:L,k),Lw,Lw); % LwxLw
             cwk=th.c(Lt+1:L,k); % Lwx1
-            covyk=covyk+Awk*Gammawk*Awk'; % DxD
             muyk=bsxfun(@plus,muyk,Awk*cwk); % DxN
         end
         logr(:,k) = log(th.pi(k))*ones(N,1);
-        logr(:,k) = logr(:,k) + loggausspdf(y,muyk,covyk)';
+        if (Lw>0)
+            logr(:,k) = logr(:,k) + loggausspdf_diag_lowk(y,muyk,covyk,Awk,Gammawk)';
+        else
+            logr(:,k) = logr(:,k) + loggausspdf_diag(y,muyk,covyk)';
+        end
         if(Lt>0)
             logr(:,k) = logr(:,k)+...
                         loggausspdf(t,th.c(1:Lt,k),th.Gamma(1:Lt,1:Lt,k))';
@@ -252,8 +267,8 @@ function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
 end
 
 function [muw,Sw] = ExpectationW(t,y,th,verb)
-    if(verb>=1);fprintf(1,'  EW'); end;
-    if(verb>=3);fprintf(1,' k='); end;
+    if(verb>=1);fprintf(1,'  EW'); end
+    if(verb>=3);fprintf(1,' k='); end
     [D,N]=size(y);
     K=length(th.pi);
     Lt=size(t,1);
@@ -267,19 +282,19 @@ function [muw,Sw] = ExpectationW(t,y,th,verb)
     Sw=zeros(Lw,Lw,K);
     muw=zeros(Lw,N,K);
     for k=1:K
-        if(verb>=3);fprintf(1,'%d,',k); end;
+        if(verb>=3);fprintf(1,'%d,',k); end
         Atk=reshape(th.A(:,1:Lt,k),D,Lt); %DxLt
         Awk=reshape(th.A(:,Lt+1:L,k),D,Lw); %DxLw
-        Sigmak=reshape(th.Sigma(:,:,k),D,D); %DxD
         Gammawk=reshape(th.Gamma(Lt+1:L,Lt+1:L,k),Lw,Lw);%LwxLw
         cwk=th.c(Lt+1:L,k); %Lwx1
-        invSwk=eye(Lw)+Gammawk*Awk'/Sigmak*Awk; %LwxLw
+        GammawkAwktinvSigmak = Gammawk*bsxfun(@rdivide, Awk, th.Sigma(:,k))'; % LwxD
+        invSwk=eye(Lw)+GammawkAwktinvSigmak*Awk; %LwxLw
         if(~isempty(t))
             Atkt=Atk*t;
         else
             Atkt=0;
         end
-        muw(:,:,k)=invSwk\bsxfun(@plus,Gammawk*Awk'/Sigmak*...
+        muw(:,:,k)=invSwk\bsxfun(@plus, GammawkAwktinvSigmak *...
                                 bsxfun(@minus,y-Atkt,th.b(:,k)),cwk); %LwxN
         Sw(:,:,k)=invSwk\Gammawk;
     end
@@ -303,7 +318,7 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
     th.pi=NaN(1,K);
     th.A=NaN(D,L,K);
     th.b=NaN(D,K);
-    th.Sigma=NaN(D,D,K);
+    th.Sigma=NaN(D,K); % Diagonal of DxDxK Sigma matrix
 
     rk_bar=zeros(1,K);
     for k=1:K
@@ -325,7 +340,7 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
             diffGamma=bsxfun(@times,sqrt(rk),bsxfun(@minus,t,th.c(1:Lt,k))); % LtxN
             if(isempty(cstr.Gammat) || (length(cstr.Gammat)==1 && cstr.Gammat=='*'))
                 %%%% Full Gammat
-                th.Gamma(1:Lt,1:Lt,k)=diffGamma*diffGamma'./rk_bar(k); % DxD
+                th.Gamma(1:Lt,1:Lt,k)=diffGamma*diffGamma'./rk_bar(k); % LtxLt
                 th.Gamma(1:Lt,1:Lt,k)=th.Gamma(1:Lt,1:Lt,k);
             elseif(~ischar(cstr.Gammat))
                 %%%% Fixed Gammat
@@ -378,12 +393,12 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
         weights=sqrt(rk); % 1xN
         y_stark=bsxfun(@minus,y,yk_bar); % DxN
         y_stark=bsxfun(@times,weights,y_stark); % DxN
-        if(L>0);
+        if(L>0)
             x_stark=bsxfun(@minus,x,xk_bar); % LxN
             x_stark=bsxfun(@times,weights,x_stark); % LxN
         else
             x_stark=[];
-        end;
+        end
 
         % Robustly compute optimal transformation matrix Ak
         warning off MATLAB:nearlySingularMatrix;
@@ -421,34 +436,32 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
             th.b(:,k)=sum(bsxfun(@times,rk,wk),2)./rk_bar(k); % Dx1
         end
 
-        if(verb>=3);fprintf(1,'S'); end;
+        if(verb>=3);fprintf(1,'S'); end
         % Compute optimal covariance matrix Sigmak
         if(Lw>0)
             Awk=reshape(th.A(:,Lt+1:L,k),D,Lw);
             Swk=reshape(Sw(:,:,k),Lw,Lw);
-            ASAwk=Awk*Swk*Awk';
+            AwkSwk = Awk*Swk; % D*Lw
+            diag_ASAwk = dot(Awk,AwkSwk,2); % Dx1 diag(Awk*Swk*Awk')
         else
-            ASAwk=0;
+            diag_ASAwk = 0;
         end
         diffSigma=bsxfun(@times,sqrt(rk),bsxfun(@minus,wk,th.b(:,k))); %DxN
-        if(isempty(cstr.Sigma) || (length(cstr.Sigma)==1 && cstr.Sigma=='*'))
-            %%%% Full Sigma
-            th.Sigma(:,:,k)=diffSigma*diffSigma'./rk_bar(k); % DxD
-            th.Sigma(:,:,k)=th.Sigma(:,:,k)+ASAwk;
-        elseif(~ischar(cstr.Sigma))
+%         if(isempty(cstr.Sigma) || (length(cstr.Sigma)==1 && cstr.Sigma=='*'))
+%             %%%% Full Sigma
+%             th.Sigma(:,:,k)=diffSigma*diffSigma'./rk_bar(k); % DxD
+%             th.Sigma(:,:,k)=th.Sigma(:,:,k)+ASAwk;
+        if(~ischar(cstr.Sigma))
             %%%% Fixed Sigma
             th.Sigma=cstr.Sigma;
         elseif(cstr.Sigma(1)=='d' || cstr.Sigma(1)=='i')
             % Diagonal terms
-            sigma2=sum(diffSigma.^2,2)./rk_bar(k); %Dx1
-            if(cstr.Sigma(1)=='d')
-                %%% Diagonal Sigma
-                th.Sigma(:,:,k)=diag(sigma2); % DxD
-                th.Sigma(:,:,k)=th.Sigma(:,:,k)+diag(diag(ASAwk));
-            else
-                %%% Isotropic Sigma
-                th.Sigma(:,:,k)=mean(sigma2)*eye(D); % DxD
-                th.Sigma(:,:,k)=th.Sigma(:,:,k)+trace(ASAwk)/D*eye(D);
+            sigma2=sum(diffSigma.^2,2)./rk_bar(k); % Dx1
+            %%% Diagonal Sigma
+            th.Sigma(:,k)=sigma2 + diag_ASAwk; % Dx1
+            %%% Isotropic Sigma
+            if cstr.Sigma(1)=='i'
+                th.Sigma(:,k)=mean(th.Sigma(:,k))*ones(D,1);
             end
         else
             cstr.Sigma,
@@ -460,10 +473,10 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
             th.Gamma(1:Lt,1:Lt,k)=0;
         end
         th.Gamma(1:Lt,1:Lt,k)=th.Gamma(1:Lt,1:Lt,k)+1e-8*eye(Lt);
-        if(~isfinite(sum(sum(th.Sigma(:,:,k)))))
-            th.Sigma(:,:,k)=0;
+        if(~isfinite(sum(sum(th.Sigma(:,k)))))
+            th.Sigma(:,k)=0;
         end
-        th.Sigma(:,:,k)=th.Sigma(:,:,k)+1e-8*eye(D);
+        th.Sigma(:,k)=th.Sigma(:,k)+1e-8*ones(D,1);
         if(verb>=3);fprintf(1,','); end;
     end
     if(verb>=3);fprintf(1,'end'); end;
@@ -471,8 +484,8 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
     if(ischar(cstr.Sigma) && ~isempty(cstr.Sigma) && ...
                              cstr.Sigma(length(cstr.Sigma))=='*')
         %%% Equality constraint on Sigma
-        th.Sigma=bsxfun(@times,th.Sigma,reshape(rk_bar,[1,1,K]));
-        th.Sigma=bsxfun(@times,ones(size(th.Sigma)),sum(th.Sigma,3))./N;
+        th.Sigma=bsxfun(@times,th.Sigma,reshape(rk_bar./N,[1,K]));
+        th.Sigma=repmat(sum(th.Sigma,2),[1,K]);
     end
 
     if(cstr.Gammat=='v')
@@ -528,13 +541,13 @@ function [th,cstr]=remove_empty_clusters(th1,cstr1,ec)
         if(~isempty(cstr.b) && ~ischar(cstr.b))
             cstr.b=cstr.b(:,ec);end;
         if(~isempty(cstr.Sigma) && ~ischar(cstr.Sigma))
-            cstr.Sigma=cstr.Sigma(:,:,ec);end;
+            cstr.Sigma=cstr.Sigma(:,ec);end;
 
         th.c=th.c(:,ec);
         th.Gamma=th.Gamma(:,:,ec);
         th.pi=th.pi(ec);
         th.A=th.A(:,:,ec);
         th.b=th.b(:,ec);
-        th.Sigma=th.Sigma(:,:,ec);
+        th.Sigma=th.Sigma(:,ec);
     end
 end

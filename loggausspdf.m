@@ -1,4 +1,4 @@
-function y = loggausspdf(X, mu, Sigma)
+function [y, c, q] = loggausspdf(X, mu, Sigma)
 [d,n] = size(X);
 X = bsxfun(@minus,X,mu); % dxn
 [U,p]= chol(Sigma); %dxd

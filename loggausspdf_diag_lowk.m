@@ -17,7 +17,10 @@ invA_diag = 1./A; % Dx1
 D = inv(B) + bsxfun(@times,C,invA_diag)'*C; % LwxLw
 
 % 1x1 NORMALIZATION CONSTANT
-logdetSigma = sum(log(A)) + log(det(eye(Lw) + C'*diag(invA_diag)*(C*B)));
+% logdetSigma = sum(log(A)) + log(det(eye(Lw) + C'*diag(invA_diag)*(C*B)));
+logdetSigma = sum(log(A)) + log( ...
+                                det(eye(Lw) ...
+                                + bsxfun(@times, C, invA_diag)'*(C*B)));
 c = d*log(2*pi)+logdetSigma;
 
 bar = zeros(1,n);
@@ -25,6 +28,12 @@ for i=1:n
     a = (Xdiff(:,i).*invA_diag)'*C;
     bar(i) = (a/D)*a';
 end
+
+% % TODO: with broadcasting
+% asd = bsxfun(@times, invA_diag,C);
+% asd = (asd/D)*asd';
+% bar4 = dot(Xdiff'*asd,Xdiff');
+
 
 b = sum(bsxfun(@times, invA_diag, Xdiff.^2),1); % 1xN
 q = b - bar;

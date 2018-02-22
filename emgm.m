@@ -102,7 +102,7 @@ for i = 1:k
     Xo = bsxfun(@times,Xo,sqrtR(:,i)');
     Sigma(:,:,i) = Xo*Xo'/nk(i);
     % add a prior for numerical stability
-    Sigma(:,:,i) = Sigma(:,:,i)+eye(d)*(1e-08);
+    Sigma(:,:,i) = Sigma(:,:,i)+eye(d)*(1e-04);
 end
 
 model.mu = mu;

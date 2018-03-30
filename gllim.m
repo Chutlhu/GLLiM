@@ -406,17 +406,16 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
         end
 
         % Robustly compute optimal transformation matrix Ak
-        warning off MATLAB:nearlySingularMatrix;
         if(~all(all(Skx==0)))
-            if(N>=L && det(Skx+x_stark*x_stark')>10^(-8))
+            if(N>=L && rcond(Skx+x_stark*x_stark')>1e-4)
                 th.A(:,:,k)=y_stark*x_stark'/(Skx+x_stark*x_stark'); % DxL
             else
                 th.A(:,:,k)=y_stark*x_stark'*pinv(Skx+x_stark*x_stark'); %DxL
             end
         elseif(~all(all(x_stark==0)))
-            if(N>=L && det(x_stark*x_stark')>10^(-8))
+            if(rcond(x_stark*x_stark')>1e-4)
                th.A(:,:,k)=y_stark*x_stark'/(x_stark*x_stark'); % DxL
-            elseif(N<L && det(x_stark'*x_stark)>10^(-8))
+            elseif(rcond(x_stark'*x_stark)>1e-4)
                th.A(:,:,k)=y_stark/(x_stark'*x_stark)*x_stark'; % DxL
             else
                 if(verb>=3);fprintf(1,'p'); end;

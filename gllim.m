@@ -77,31 +77,18 @@ else
       if verb>=1
           fprintf('Running k-means... ')
       end
-      if verb>=2
-          if N>1000
-              p = randperm(N);
-              [~,C] = kmeans([t(:,p(1:1000));y(:,p(1:1000))]',...
-                              in_K,'Display','iter');
-          else
-              [~,C] = kmeans([t;y]',in_K,'Display','iter');
-          end
+      if N>1000
+          p = randperm(N);
+          % using kmeans toolbox
+          [~,C,~] = kmeans([t(:,p(1:1000));y(:,p(1:1000))],in_K);
       else
-          if N>1000
-              p = randperm(N);
-              [~,C] = kmeans([t(:,p(1:1000));y(:,p(1:1000))]',in_K);
-          else
-              [~,C] = kmeans([t;y]',in_K);
-          end
+          % using kmeans toolbox
+          [~,C,~] = kmeans([t;y],in_K);
       end
-      % [~, ~, ~, r] = emgm([t;y], C', 3, verb);
-      % [~, ~, ~, r] = emgm([t;y], in_K, 3, verb);
-      [~, ~, ~, r] = emgm([t;y], C', 20, verb);
-      % [~,cluster_idx]=mar,[],2);
-      % fig=figure;clf(fig);
-      % scatter(t(1,,t(2,,200,cluster_idx','filled');
+      [~, ~, ~, r] = emgm([t;y], C, 3, verb);
       if verb>=1
           fprintf('done.\n')
-          fprintf('Running GMM... ')
+          fprintf('Running GMM... \n')
       end
     end
     if(Lw==0)
@@ -419,7 +406,7 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
                th.A(:,:,k)=y_stark/(x_stark'*x_stark)*x_stark'; % DxL
             else
                 if(verb>=3);fprintf(1,'p'); end;
-                th.A(:,:,k)=y_stark*pinv(x_stark);  % DxL
+                th.A(:,:,k)=y_stark*pinv(x_stark'*x_stark);  % DxL
             end
         else
             % Correspond to null variance in cluster k or L=0:

@@ -3,7 +3,7 @@ function [y, c, q] = loggausspdf_diag_lowk(X, mu, A, C, B)
 [d,n] = size(X);
 Lw = size(B,1);
 
-if (sum(A == 0)>0)
+if (sum(A == 0)>0) || all(A < 10*eps)
     fprintf(1,'SNPD! ');
     y=-Inf(1,n); % 1xn
     return;
@@ -24,6 +24,7 @@ logdetSigma = sum(log(A)) + log( ...
 c = d*log(2*pi)+logdetSigma;
 
 bar = zeros(1,n);
+warning('off','all')
 for i=1:n
     a = (Xdiff(:,i).*invA_diag)'*C;
     bar(i) = (a/D)*a';
@@ -39,5 +40,4 @@ b = sum(bsxfun(@times, invA_diag, Xdiff.^2),1); % 1xN
 q = b - bar;
 
 y = -(c+q)/2; % 1xn
-
 end

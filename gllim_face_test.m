@@ -9,7 +9,7 @@ function gllim_face_test(images,poses)
     [D,N]=size(images);
 
     K=25; % K=25 affine components
-    cstr.Sigma='i*'; % Isotropic equal constraints on Sigma
+    cstr.Sigma='d*'; % Isotropic equal constraints on Sigma
 
     t_all=poses;
     y_all=images;

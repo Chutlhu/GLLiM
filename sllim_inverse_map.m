@@ -1,4 +1,4 @@
-function [x_exp, alpha] = sllim_inverse_map(y, theta, phi,verb)
+function [x_exp, alpha] = sllim_inverse_map(y, theta,verb)
 %%%%%%%%%%%%%%%%% Inverse Mapping from Gllim Parameters %%%%%%%%%%%%%%%%%%%
 %%%% Author: Antoine Deleforge (July 2012) - antoine.deleforge@inria.fr %%%
 %% Converted to R: Emeline Perthame (2016) - perthame.emeline@gmail.com %%%
@@ -14,12 +14,12 @@ function [x_exp, alpha] = sllim_inverse_map(y, theta, phi,verb)
 %   - theta.A (DxLxK)     % Affine transformation matrices
 %   - theta.b (DxK)       % Affine transformation vectors
 %   - theta.Sigma (DxDxK) % Error covariances
-% - verb 0,1,2          % Verbosity (def 1)
-%-  phi  (struct)         % Estimated parameters
-%   - phi.pi (1xK)        % t weights of X
-%   - phi.alpha (1xK)     % Arellano-Valle and Bolfarine's Generalized t
+%		- theta.phi  (struct)         % Estimated parameters
+%   	- theta.phi.pi (1xK)        % t weights of X
+%   	- theta.phi.alpha (1xK)     % Arellano-Valle and Bolfarine's Generalized t
 %   distrib - alpha parameter
 %   - phi.gamma (1xK)   % Arellano-Valle and Bolfarine's Generalized t
+% - verb 0,1,2          % Verbosity (def 1)
 %   distrib - gamma parameter
 %%%% Output %%%%
 % - x_exp (LxN)           % Posterior mean estimates E[xn|yn;theta]
@@ -69,11 +69,11 @@ function [x_exp, alpha] = sllim_inverse_map(y, theta, phi,verb)
 					sldR=sum(log(diag(R)));
             end
             logalpha(:,k)...
-			 		= log(phi.pi(k)) ...
+			 		= log(theta.phi.pi(k)) ...
 						+ logtpdfL(...
                             sum(log(diag(R))),...
                             mahalanobis_distance(y,cks,Gammaks,'full'),...
-                            phi.alpha(k), D);
+                            theta.phi.alpha(k), D);
 
 			if(verb>=2), fprintf(1,'\n'); end
 	end
@@ -81,7 +81,7 @@ function [x_exp, alpha] = sllim_inverse_map(y, theta, phi,verb)
 	den=logsumexp(logalpha,2); % Nx1
 	logalpha=bsxfun(@minus,logalpha,den); % NxK Normalization
 	alpha=exp(logalpha); % NxK
-	
+
 	x_exp=reshape(sum(bsxfun(@times,reshape(alpha,[1,N,K]),proj),3),L,N); %LxN
 
 end

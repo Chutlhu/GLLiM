@@ -1,4 +1,4 @@
-function [theta, phi, r, LLf, LL] = sllim(tapp, yapp, in_K, varargin)
+function [theta, r, LLf, LL] = sllim(tapp, yapp, in_K, varargin)
   %%%%%%%% General EM Algorithm for Gaussian Locally Linear Mapping %%%%%%%%%
   %%% Author: Antoine Deleforge (April 2013) - antoine.deleforge@inria.fr %%%
   % Description: Compute maximum likelihood parameters theta and posterior
@@ -189,7 +189,7 @@ function [theta, phi, r, LLf, LL] = sllim(tapp, yapp, in_K, varargin)
 
   %% Final log-likelihood %%%
   LLf=LL(iter);
-  
+
   Sigma_full = zeros(D,D,K);
   for k=1:K
       Sigma_full(:,:,k) = diag(theta.Sigma(:,k));
@@ -222,7 +222,7 @@ function [theta, phi, r, LLf, LL] = sllim(tapp, yapp, in_K, varargin)
   else
     nbparGamma = Lt*(Lt+1)/2;
   end
-
+  theta.phi = phi;
   theta.nbpar = (in_K-1) + in_K*(1 + D*L + D + Lt + nbparSigma + nbparGamma);
   % =============================Final plots===============================
   if(verb>=1);fprintf(1,'Converged in %d iterations\n',iter);end
@@ -254,7 +254,7 @@ function [r, LL, ec, u, mahalt, mahaly] = ExpectationZU(tapp, yapp, th, ph, verb
     if Lt>0
         Atk = th.A(:,1:Lt,k); %% DxLt
         muyk = Atk*tapp + muyk;% DxN
-        Gammawk = []; 
+        Gammawk = [];
     end
 
     if Lw>0
@@ -264,13 +264,13 @@ function [r, LL, ec, u, mahalt, mahaly] = ExpectationZU(tapp, yapp, th, ph, verb
 %       AwkGammawkAwkt = Awk*Gammawk*Awk'; % DxD
       muyk= bsxfun(@plus,muyk,Awk*cwk); % DxN
     end
-    
+
     if isempty(Gammawk)
         mahaly(:,k) = mahalanobis_distance(yapp,muyk,covyk,'diag');
     else
         mahaly(:,k) = mahalanobis_distance(yapp,muyk,covyk,'diag_lowr',Awk,Gammawk);
     end
-    
+
     mahalt(:,k) = mahalanobis_distance(tapp,th.c(1:Lt,k,:),th.Gamma(1:Lt,1:Lt,k),'full');
 
     u(:,k) = (alphak + (D+Lt)/2)./(1 + 0.5*(mahalt(:,k) + mahaly(:,k)));
@@ -284,7 +284,7 @@ function [r, LL, ec, u, mahalt, mahaly] = ExpectationZU(tapp, yapp, th, ph, verb
     else
       sldR=sum(log(diag(R)));
     end
-    
+
     %%%% modif EP
     logr(:,k) = repmat(log(ph.pi(k)),N,1) ...
                 + logtpdfL(sldR,mahalt(:,k),alphak, Lt) ...

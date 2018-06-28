@@ -77,7 +77,7 @@ k = size(mu,2);
 logRho = zeros(n,k);
 
 for i = 1:k
-    logRho(:,i) = loggausspdf(X,mu(:,i),Sigma(:,:,i));
+    logRho(:,i) = loggausspdf_diag(X,mu(:,i),Sigma(:,:,i));
 end
 logRho = bsxfun(@plus,logRho,log(w));
 T = logsumexp(logRho,2);
@@ -103,7 +103,7 @@ for i = 1:k
     %Sigma(:,:,i) = Xo*Xo'/nk(i);
     % add a prior for numerical stability
     %Sigma(:,:,i) = Sigma(:,:,i)+eye(d)*(1e-04);
-    Sigma(:,:,i) = eye(d);
+    %Sigma(:,:,i) = eye(d);
 end
 
 model.mu = mu;

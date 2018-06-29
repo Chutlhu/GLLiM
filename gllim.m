@@ -365,9 +365,9 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
       if(verb>=3);fprintf(1,'A'); end;
       if(isempty(cstr.b))
           % Compute weighted means of y and x
-          yk_bar=sum(bsxfun(@times,y,rk),2)./rk_bar(k); % Dx1
+          yk_bar=sum(bsxfun(@times,y,rk),2)./sqrt(rk_bar(k)); % Dx1
           if(L>0);
-              xk_bar=sum(bsxfun(@times,x,rk),2)./rk_bar(k); % Lx1
+              xk_bar=sum(bsxfun(@times,x,rk),2)./sqrt(rk_bar(k)); % Lx1
           else
               xk_bar=[];
           end;

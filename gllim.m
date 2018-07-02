@@ -26,6 +26,7 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
 %   - cstr.b             % fixed value (DxK) or ''=uncons.
 %   - cstr.Sigma         % fixed value (DxK) or ''=diagonal.
 %                         | or {'','d','i'}{'','*'} (1)
+%- fast_init {0,1}        % Fast initialization (default 1) 
 %- verb {0,1,2}           % Verbosity (default 1)
 %%%% Output %%%%
 %- theta  (struct)        % Estimated parameters (L=Lt+Lw)
@@ -39,9 +40,9 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
 %%% (1) 'd'=diag., 'i'=iso., '*'=equal for all k, 'v'=equal det. for all k
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % ======================Input Parameters Retrieval=========================
-  [Lw, maxiter, in_theta, in_r, cstr, verb] = ...
+  [Lw, maxiter, in_theta, in_r, cstr, fast_init, verb] = ...
       process_options(varargin,'Lw',0,'maxiter',100,'in_theta',[],...
-      'in_r',[],'cstr',struct(),'verb',1);
+      'in_r',[],'cstr',struct(),'fast_init',1,'verb',1);
   Lt=size(t,1);
   L=Lt+Lw;
   [D,N]=size(y);
@@ -74,7 +75,7 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
       if(isempty(in_r))
           % Initialise posteriors with K-means + GMM on joint observed data
           % Fast initialization for large datasets
-          r = init_knn_emgm(t,y,in_K,3,verb);
+          r = init_knn_emgm(t,y,in_K,fast_init,verb);
       end
       if(Lw==0)
           Sw=[];
@@ -115,14 +116,8 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
               theta.Sigma(:,k)=sigma2k*ones(D,1);
               Aw(:,:,k) = U*sqrt(Lambda-sigma2k*eye(Lw));
               if any(sigma2k < 0) || ~isreal(Aw(:,:,k))
-                 error('BUG');
+                 error('BUG: sigma2k cannot be negative.');
               end
-%               if ~isreal(tmp_pca)
-%                  fprintf('You are going crazy and complex\n');
-%                  Aw(:,:,k) = zeros(size(Aw(:,:,1)));
-%               else
-%                  Aw(:,:,k) = tmp_pca;
-%               end
           end
           theta.A=cat(2,theta.A,Aw); %DxLxK
           [r,~,ec] = ExpectationZ(t,y,theta,verb);
@@ -178,17 +173,17 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
 
   % =============================Final plots===============================
   if(verb>=1);fprintf(1,'Converged in %d iterations\n',iter);end
-%   if(verb>=2)
-%       fig=figure;clf(fig);
-%       plot(LL);
-%       [~,cluster_idx]=max(r,[],2);
-%       %     for d=1:D/2
-%       %         fig=figure;clf(fig);
-%       %         scatter(y(2*d-1,:),y(2*d,:),200,cluster_idx');
-%       %     end
-%       %     fig=figure;clf(fig);
-%       %     scatter(t(1,:),t(2,:),200,cluster_idx','filled');
-%   end
+  if(verb>=2)
+      fig=figure;clf(fig);
+      plot(LL);
+      [~,cluster_idx]=max(r,[],2);
+      for d=1:D/2
+          fig=figure;clf(fig);
+          scatter(y(2*d-1,:),y(2*d,:),200,cluster_idx');
+      end
+      fig=figure;clf(fig);
+      scatter(t(1,:),t(2,:),200,cluster_idx','filled');
+  end
 end
 
 function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
@@ -246,7 +241,7 @@ function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
   end
   if(sum(ec)==0)
       fprintf(1,'REINIT! ');
-      r = init_knn_emgm(t,y,K,6,verb);
+      r = init_knn_emgm(t,y,K,6,1,verb);
       ec(1:size(r,2)) = true(1,size(r,2));
   else
       r = r(:,ec);
@@ -288,7 +283,7 @@ function [muw,Sw] = ExpectationW(t,y,th,verb)
 end
 
 function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
-  if(verb>=1);fprintf(1,'  M'); end;
+  if(verb>=1);fprintf(1,'  M'); end
   if(verb>=3);fprintf(1,' k='); end
   K=size(r,2);
   [D,N]=size(y);
@@ -362,15 +357,15 @@ function  th = Maximization(t,y,r,muw,Sw,cstr,verb)
           Skx=zeros(Lt); %LtxLt
       end
 
-      if(verb>=3);fprintf(1,'A'); end;
+      if(verb>=3);fprintf(1,'A'); end
       if(isempty(cstr.b))
           % Compute weighted means of y and x
           yk_bar=sum(bsxfun(@times,y,rk),2)./sqrt(rk_bar(k)); % Dx1
-          if(L>0);
+          if(L>0)
               xk_bar=sum(bsxfun(@times,x,rk),2)./sqrt(rk_bar(k)); % Lx1
           else
               xk_bar=[];
-          end;
+          end
       else
           yk_bar=cstr.b(:,k);
           xk_bar=zeros(L,1);
@@ -552,14 +547,14 @@ function [th,cstr]=remove_empty_clusters(th1,cstr1,ec)
   end
 end
 
-function r = init_knn_emgm(t,y,in_K,iter,verb)
+function r = init_knn_emgm(t,y,in_K,fast_init,verb)
   % function: Short description
   %
   % Extended description
   N = size(y,2);
   kmeans_point = in_K * 100;
   if verb>=1
-      fprintf('\tRunning K-MEANS... ')
+      fprintf('  Running K-MEANS... ')
   end
   if N>kmeans_point
       p = randperm(N);
@@ -570,9 +565,13 @@ function r = init_knn_emgm(t,y,in_K,iter,verb)
   end
   if verb>=1
       fprintf('done.\n')
-      fprintf('\tRunning GMM... ')
+      fprintf('  Running GMM... ')
   end
-  r = emgm_diag([t;y], C');
+  if fast_init
+    r = emgm_diag([t;y], C');
+  else
+    [~, ~, ~, r] = emgm([t;y], C', 30, verb); 
+  end
   if verb>=1
       fprintf('done.\n')
   end

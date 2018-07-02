@@ -18,7 +18,7 @@ while ~converged && t < maxiter
     if(verb>=1);fprintf('     Step %d\n',t);end;
     model = maximization(X,R);
     [R, llh(t+1)] = expectation(X,model);
-
+   
     [~,label(:)] = max(R,[],2);
     u = unique(label);   % non-empty components
     if size(R,2) ~= size(u,2)
@@ -77,7 +77,7 @@ k = size(mu,2);
 logRho = zeros(n,k);
 
 for i = 1:k
-    logRho(:,i) = loggausspdf_diag(X,mu(:,i),Sigma(:,:,i));
+    logRho(:,i) = loggausspdf(X,mu(:,i),Sigma(:,:,i));
 end
 logRho = bsxfun(@plus,logRho,log(w));
 T = logsumexp(logRho,2);
@@ -96,14 +96,13 @@ w = nk/n;
 mu = bsxfun(@times, X*R, 1./nk);
 
 Sigma = zeros(d,d,k);
-%sqrtR = sqrt(R);
+sqrtR = sqrt(R);
 for i = 1:k
-    %Xo = bsxfun(@minus,X,mu(:,i));
-    %Xo = bsxfun(@times,Xo,sqrtR(:,i)');
-    %Sigma(:,:,i) = Xo*Xo'/nk(i);
+    Xo = bsxfun(@minus,X,mu(:,i));
+    Xo = bsxfun(@times,Xo,sqrtR(:,i)');
+    Sigma(:,:,i) = Xo*Xo'/nk(i);
     % add a prior for numerical stability
-    %Sigma(:,:,i) = Sigma(:,:,i)+eye(d)*(1e-04);
-    %Sigma(:,:,i) = eye(d);
+    Sigma(:,:,i) = Sigma(:,:,i)+eye(d)*(1e-08);
 end
 
 model.mu = mu;

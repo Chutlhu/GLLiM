@@ -21,4 +21,5 @@
 %%% value is increased from the leftmost to the rightmost column.
 
 load data/face_data.mat;
+addpath('./utils/')
 gllim_face_test(images,poses);

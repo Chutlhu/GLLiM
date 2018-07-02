@@ -17,7 +17,7 @@ R = full(sparse(1:N,label,1,N,K,N));
 for k=1:K
     % M-step
     diff = bsxfun(@minus,X,C(:,K)).^2;
-    Sigmak = sum(bsxfun(@times,diff,R(:,k)'),2)/sum(R(:,k));
+    Sigmak = sum(bsxfun(@times,diff,R(:,k)'),2)/sum(R(:,k)) + 1e-08;
     % E-step
     logRho(:,k) = loggausspdf_diag(X,C(:,k),Sigmak);
 end

@@ -28,14 +28,14 @@ function gllim_face_test(images,poses)
     maxiter = 20;
     Lw=0;
     [gthetaLw0,~]=gllim(t,y, K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
-    Lw=2;
+    Lw=1;
     [gthetaLw1,~]=gllim(t,y,K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
 
-    %%%% Training a SLLiM model using Lw=0 or Lw=1 %%%
-    Lw=0;
-    [sthetaLw0,sphiLw0,~]=sllim(t,y, K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
-    Lw=2;
-    [sthetaLw1,sphiLw1,~]=sllim(t,y,K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
+%     %%%% Training a SLLiM model using Lw=0 or Lw=1 %%%
+%     Lw=0;
+%     [sthetaLw0,sphiLw0,~]=sllim(t,y, K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
+%     Lw=2;
+%     [sthetaLw1,sphiLw1,~]=sllim(t,y,K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
 
     % Pose Estimation:
     % GLLiM
@@ -43,24 +43,25 @@ function gllim_face_test(images,poses)
     gerr_Lw0=sqrt(sum((gpos_est_Lw0(1:2,:)-tt).^2));
     gpos_est_Lw1=gllim_inverse_map(yt,gthetaLw1,0); % Lw=1
     gerr_Lw1=sqrt(sum((gpos_est_Lw1(1:2,:)-tt).^2));
-    % SLLiM
-    spos_est_Lw0=sllim_inverse_map(yt,sthetaLw0,sphiLw0,0); % Lw=0
-    serr_Lw0=sqrt(sum((spos_est_Lw0(1:2,:)-tt).^2));
-    spos_est_Lw1=sllim_inverse_map(yt,sthetaLw1,sphiLw1,0); % Lw=1
-    serr_Lw1=sqrt(sum((spos_est_Lw1(1:2,:)-tt).^2));
-
+    
     fprintf(1,'GLLiM: Mean pose estimation error using Lw=0: %g+/-%g\n',...
                mean(gerr_Lw0),std(gerr_Lw0));
     fprintf(1,'GLLiM: Mean pose estimation error using Lw=1: %g+/-%g\n',...
                mean(gerr_Lw1),std(gerr_Lw1));
     fprintf(1,'\n');
-
-    fprintf(1,'SLLiM: Mean pose estimation error using Lw=0: %g+/-%g\n',...
-               mean(serr_Lw0),std(serr_Lw0));
-    fprintf(1,'SLLiM: Mean pose estimation error using Lw=1: %g+/-%g\n',...
-               mean(serr_Lw1),std(serr_Lw1));
-    fprintf(1,'\n');
-    pause
+    
+%     % SLLiM
+%     spos_est_Lw0=sllim_inverse_map(yt,sthetaLw0,sphiLw0,0); % Lw=0
+%     serr_Lw0=sqrt(sum((spos_est_Lw0(1:2,:)-tt).^2));
+%     spos_est_Lw1=sllim_inverse_map(yt,sthetaLw1,sphiLw1,0); % Lw=1
+%     serr_Lw1=sqrt(sum((spos_est_Lw1(1:2,:)-tt).^2));
+% 
+%     fprintf(1,'SLLiM: Mean pose estimation error using Lw=0: %g+/-%g\n',...
+%                mean(serr_Lw0),std(serr_Lw0));
+%     fprintf(1,'SLLiM: Mean pose estimation error using Lw=1: %g+/-%g\n',...
+%                mean(serr_Lw1),std(serr_Lw1));
+%     fprintf(1,'\n');
+%     pause
 
     fig=figure;clf(fig);
     colormap('Gray');

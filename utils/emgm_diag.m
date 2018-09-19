@@ -1,4 +1,4 @@
-function R = emgm_diag(X, C)
+function R = emgm_diag(X, C, it)
 % Perform ONE iteration of EM algorithm for fitting a Gaussian mixture
 % model with diagonal covariance matrices, given initial centroids
 %   X: D x N data matrix
@@ -17,7 +17,7 @@ R = full(sparse(1:N,label,1,N,K,N));
 for k=1:K
     % M-step
     diff = bsxfun(@minus,X,C(:,K)).^2;
-    Sigmak = sum(bsxfun(@times,diff,R(:,k)'),2)/sum(R(:,k)) + 1e-08;
+    Sigmak = max(sum(bsxfun(@times,diff,R(:,k)'),2)/sum(R(:,k)), 1e-08);
     % E-step
     logRho(:,k) = loggausspdf_diag(X,C(:,k),Sigmak);
 end

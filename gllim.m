@@ -73,9 +73,15 @@ function [theta,r,LLf] = gllim(t,y,in_K,varargin)
       if(verb>=1);fprintf(1,'\n');end
   else
       if(isempty(in_r))
-          % Initialise posteriors with K-means + GMM on joint observed data
-          % Fast initialization for large datasets
-          r = init_knn_emgm(t,y,in_K,fast_init,verb);
+          if ~isempty(cstr.ct)
+            % if the cluster are already provided, there is no need of fancy
+            % initialization. Just on EM step with ct as initialization
+            r = init_one_em_step(t,cstr.ct);
+          else
+            % Initialise posteriors with K-means + GMM on joint observed data
+            % Fast initialization for large datasets
+            r = init_knn_emgm(t,y,in_K,fast_init,verb);
+          end
       end
       if(Lw==0)
           Sw=[];
@@ -577,3 +583,23 @@ function r = init_knn_emgm(t,y,in_K,fast_init,verb)
   end
   r(r<eps) = 0;
 end  % function
+
+
+function r = init_one_em_step(X,C)
+  % X = DxN
+  % C = ct = LxK
+
+  [L,K] = size(C);
+  [D,N] = size(X);
+  kernel_width = 2;
+  Sigma = repmat(kernel_width*(C(:,2) - C(:,1)).^2,[1,K]);
+
+  % Diagonal Sigma_k estimation (M-step) and posterior update (E-step)
+  for k=1:K
+      % E-step
+      logRho(:,k) = loggausspdf_diag(X,C(:,k),Sigma(:,k));
+  end
+  T = logsumexp(logRho,2);
+  logR = bsxfun(@minus,logRho,T);
+  R = exp(logR);
+end

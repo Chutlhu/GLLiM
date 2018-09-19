@@ -8,14 +8,24 @@ function gllim_face_test(images,poses)
     images=reshape(images_mat(1:2:64,1:2:64,:),[32*32,N]);
     [D,N]=size(images);
 
-    K=25; % K=25 affine components
-    cstr.Sigma='d*'; % Isotropic equal constraints on Sigma
-
     t_all=poses;
     y_all=images;
 
+    %%%%%%%%
+    %% PRIORS FOR GLLiM
+    %
+    Lt = size(t_all,1);
+
+    K=25; % K=25 affine components
+    cstr.Sigma='d*'; % Isotropic equal constraints on Sigma
+    cstr.pi = '*'; 
+    cstr.ct = zeros(Lt,K);
+    for l = 1:Lt
+        cstr.ct(l,:) = linspace(min(t_all(l,:)), max(t_all(l,:)), K);
+    end
+
     %%%%%%%%%%% Pick N-T training data %%%%%%%%%%%
-    rand_idx = randperm(N); % Shuffle indexes
+    rand_idx = 1:N; %randperm(N); % Shuffle indexes
     t=t_all(:,rand_idx(1:N-T)); % LxN-T Select N-T training parameters
     y=y_all(:,rand_idx(1:N-T)); % DxN-T Select N-T training observations
 

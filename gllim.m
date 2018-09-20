@@ -234,7 +234,6 @@ function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
   lognormr=logsumexp(logr,2);
   LL=sum(lognormr);
   r=exp(bsxfun(@minus,logr,lognormr));
-
   % remove empty clusters
   ec=true(1,K); % false if component k is empty.
   for k=1:K
@@ -247,7 +246,7 @@ function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
   end
   if(sum(ec)==0)
       fprintf(1,'REINIT! ');
-      r = init_knn_emgm(t,y,K,6,1,verb);
+      r = init_knn_emgm(t,y,K,0,verb);
       ec(1:size(r,2)) = true(1,size(r,2));
   else
       r = r(:,ec);
@@ -589,6 +588,8 @@ function r = init_one_em_step(X,C)
   % X = DxN
   % C = ct = LxK
 
+  fprintf('\tOne step of em using the provided centroid\n')
+
   [L,K] = size(C);
   [D,N] = size(X);
   kernel_width = 2;
@@ -601,5 +602,6 @@ function r = init_one_em_step(X,C)
   end
   T = logsumexp(logRho,2);
   logR = bsxfun(@minus,logRho,T);
-  R = exp(logR);
+  r = exp(logR);
+  r(r<eps) = 0;
 end

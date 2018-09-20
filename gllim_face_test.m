@@ -18,11 +18,11 @@ function gllim_face_test(images,poses)
 
     K=25; % K=25 affine components
     cstr.Sigma='d*'; % Isotropic equal constraints on Sigma
-    cstr.pi = '*'; 
-    cstr.ct = zeros(Lt,K);
-    for l = 1:Lt
-        cstr.ct(l,:) = linspace(min(t_all(l,:)), max(t_all(l,:)), K);
-    end
+%     cstr.pi = '*'; 
+%     cstr.ct = zeros(Lt,K);
+%     for l = 1:Lt
+%         cstr.ct(l,:) = linspace(min(t_all(l,:)), max(t_all(l,:)), K);
+%     end
 
     %%%%%%%%%%% Pick N-T training data %%%%%%%%%%%
     rand_idx = 1:N; %randperm(N); % Shuffle indexes
@@ -38,7 +38,7 @@ function gllim_face_test(images,poses)
     maxiter = 20;
     Lw=0;
     [gthetaLw0,~]=gllim(t,y, K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
-    Lw=1;
+    Lw=2;
     [gthetaLw1,~]=gllim(t,y,K,'Lw',Lw,'cstr',cstr,'maxiter',maxiter ,'verb',1);
 
 %     %%%% Training a SLLiM model using Lw=0 or Lw=1 %%%

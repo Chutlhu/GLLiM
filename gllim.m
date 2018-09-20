@@ -254,8 +254,6 @@ function  [r,LL,ec] = ExpectationZ(t,y,th,verb)
 end
 
 function [muw,Sw] = ExpectationW(t,y,th,verb)
-  if(verb>=1);fprintf(1,'  EW'); end
-  if(verb>=3);fprintf(1,' k='); end
   [D,N]=size(y);
   K=length(th.pi);
   Lt=size(t,1);
@@ -266,6 +264,8 @@ function [muw,Sw] = ExpectationW(t,y,th,verb)
       Sw=[];
       return;
   end
+  if(verb>=1);fprintf(1,'  EW'); end
+  if(verb>=3);fprintf(1,' k='); end
   Sw=zeros(Lw,Lw,K);
   muw=zeros(Lw,N,K);
   for k=1:K

@@ -34,7 +34,12 @@ invA_diag = Adiag.^-1; % Dx1
 D = inv(B) + bsxfun(@times,C,invA_diag)'*C; % LwxLw
 
 % 1x1 NORMALIZATION CONSTANT
-logdetSigma = 2*sum(log(diag(chol(diag(Adiag) + C*B*C'))));
+% logdetSigma = 2*sum(log(diag(chol(diag(Adiag) + C*B*C'))))
+% matrix determinant lemma:
+%	det(A + UWV') = det(invW + V'inAU)det(W)det(A)
+%
+logdetSigma = sum(log(Adiag)) + log(det(B)*det(D));
+
 c = d*log(2*pi)+logdetSigma;
 
 bar = zeros(1,n);

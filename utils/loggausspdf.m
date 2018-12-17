@@ -12,6 +12,7 @@ X = bsxfun(@minus,X,mu); % dxn
 
 Q = U'\X; % dxn
 q = dot(Q,Q,1); % 1xn quadratic term (M distance)
+
 c = d*log(2*pi)+2*sum(log(diag(U))); % 1x1 normalization constant
 y = -(c+q)/2; % 1xn
 

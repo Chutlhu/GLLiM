@@ -386,9 +386,9 @@ for k=1:K
     if(verb>=3);fprintf(1,'A'); end
     if(isempty(cstr.b))
         % Compute weighted means of y and x
-        yk_bar=sum(bsxfun(@times,y,rk),2)./sqrt(rk_bar(k)); % Dx1
+        yk_bar=sum(bsxfun(@times,y,rk),2)./rk_bar(k); % Dx1
         if(L>0)
-            xk_bar=sum(bsxfun(@times,x,rk),2)./sqrt(rk_bar(k)); % Lx1
+            xk_bar=sum(bsxfun(@times,x,rk),2)./rk_bar(k); % Lx1
         else
             xk_bar=[];
         end
@@ -400,10 +400,10 @@ for k=1:K
     % Compute weighted, mean centered y and x
     weights=sqrt(rk); % 1xN
     y_stark=bsxfun(@minus,y,yk_bar); % DxN
-    y_stark=bsxfun(@times,weights,y_stark)./sum(weights); % DxN
+    y_stark=bsxfun(@times,weights,y_stark)./sqrt(rk_bar(k)); % DxN
     if(L>0)
         x_stark=bsxfun(@minus,x,xk_bar); % LxN
-        x_stark=bsxfun(@times,weights,x_stark)./sum(weights); % LxN
+        x_stark=bsxfun(@times,weights,x_stark)./sqrt(rk_bar(k)); % LxN
     else
         x_stark=[];
     end

@@ -1,4 +1,4 @@
-function [theta,r,LLf] = gllim(t,y,in_K,varargin)
+function [theta,r, init, LLf] = gllim(t,y,in_K,varargin)
 %%%%%%%% General EM Algorithm for Gaussian Locally Linear Mapping %%%%%%%%%
 %%% Author: Antoine Deleforge (April 2013) - antoine.deleforge@inria.fr %%%
 % Description: Compute maximum likelihood parameters theta and posterior
@@ -96,11 +96,12 @@ else
             r = init_one_em_step(t,cstr.ct);
         else
             % Initialise posteriors with K-means + GMM on joint observed data
-            % Fast initialization for large datasets
+            % inintFast initialization for large datasets
             r = init_knn_emgm(t,y,in_K,fast_init,verb);
         end
+        in_r = r;
+        K = size(r,2);
     else
-        r = in_r;
     end
     if(Lw==0)
         Sw=[];
@@ -151,6 +152,22 @@ else
         if(verb>=1);fprintf(1,'\n');end
     end
 end
+
+init = struct;
+K = size(r,2);
+Sigma_full = zeros(D,D,K);
+for k=1:K
+    Sigma_full(:,:,k) = diag(theta.Sigma(:,k));
+end
+init_theta = theta;
+init_theta.Sigma = Sigma_full;
+
+init.theta = init_theta;
+init.r     = in_r;
+init.ec    = ec;
+init.cstr  = cstr;
+init.muw = muw;
+init.Sw  = Sw;
 
 LLf = 0;
 
